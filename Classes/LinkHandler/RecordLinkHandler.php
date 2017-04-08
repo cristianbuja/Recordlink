@@ -82,6 +82,12 @@ class RecordLinkHandler extends AbstractLinkHandler implements LinkHandlerInterf
 		    $linkParts['url'] = array();
 		    $linkParts['url']['identifier'] = $configKey;
 		    $linkParts['url']['uid'] = $uid;
+	    } elseif(is_array($linkParts['url']) && isset($linkParts['url']['url']) && isset($linkParts['type']) && $linkParts['type']=='recordlink') {
+	        // T3 8 LTS
+		    list($configKey, $uid) = explode(':', $linkParts['url']['url']);
+			unset($linkParts['url']['url']);
+		    $linkParts['url']['identifier'] = $configKey;
+		    $linkParts['url']['uid'] = $uid;
 	    }
 
 	    if (!$linkParts['url'] || !isset($linkParts['url']['identifier'])) {
@@ -150,7 +156,6 @@ class RecordLinkHandler extends AbstractLinkHandler implements LinkHandlerInterf
     public function render(ServerRequestInterface $request)
     {
         GeneralUtility::makeInstance(PageRenderer::class)->loadRequireJsModule('TYPO3/CMS/Recordlink/RecordLinkHandler');
-
 	    $content = '
 			<div class="element-browser-panel element-browser-main">
 				<div class="element-browser-main-content">
@@ -194,18 +199,11 @@ class RecordLinkHandler extends AbstractLinkHandler implements LinkHandlerInterf
 
 	    $attributes = [];
 
-	    // Non LTS version untested
-	    if (\TYPO3\CMS\Core\Utility\VersionNumberUtility::convertVersionNumberToInteger(TYPO3_version) < 8000000) {
-		    $configKey = $this->linkParts['configKey'];
-		    $uid = $this->linkParts['recordUid'];
-		    if (!empty($this->linkParts)) {
-			    $attributes['data-current-link'] = 'recordlink:' . $configKey . ':' . $uid;
-		    }
-	    } else {
-		    if (!empty($this->linkParts)) {
-			    $attributes['data-current-link'] = GeneralUtility::makeInstance(LinkService::class)->asString($this->linkParts['url']);
-		    }
-        }
+	    $configKey = $this->linkParts['configKey'];
+	    $uid = $this->linkParts['recordUid'];
+	    if (!empty($this->linkParts)) {
+		    $attributes['data-current-link'] = 'recordlink:' . $configKey . ':' . $uid;
+	    }
 
 	    return $attributes;
 
