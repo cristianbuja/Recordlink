@@ -1,7 +1,7 @@
 
 # TS Config Recordlink Example
 
-TCEMAIN.linkHandler.record.configuration {
+TCEMAIN.linkHandler.recordlink.configuration {
 	category {
 		 label = Categories
 		 table = sys_category

@@ -37,7 +37,7 @@ define(['jquery', 'TYPO3/CMS/Recordlist/LinkBrowser'], function($, LinkBrowser) 
 		var config = $(this).data('config');
 		var uid = $(this).data('uid');
 
-		LinkBrowser.finalizeFunction('record:' + config + ':' + uid);
+		LinkBrowser.finalizeFunction('recordlink:' + config + ':' + uid);
 	};
 
 	/**

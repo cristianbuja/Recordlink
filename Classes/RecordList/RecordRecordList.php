@@ -165,7 +165,7 @@ class RecordRecordList extends DatabaseRecordList
 		return $this->addElement(1, '', $data);
 	}
 
-	public function getSearchBox() {
+	public function getSearchBox($formFields = true) {
 
 		$formElements = array('<form action="' . htmlspecialchars($this->getSearchURL()) . '" method="post" style="padding:0;">', '</form>');
 
@@ -191,7 +191,7 @@ class RecordRecordList extends DatabaseRecordList
 
 	public function getBrowseURL() {
 		if (!isset($this->browseURL)) {
-			$this->browseURL = $this->listURL() . '&act=record&config_key='.$this->configKey;
+			$this->browseURL = $this->listURL() . '&act=recordlink&config_key='.$this->configKey;
 		}
 		return $this->browseURL;
 	}

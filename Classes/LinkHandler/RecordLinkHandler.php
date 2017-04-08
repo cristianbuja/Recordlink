@@ -24,6 +24,8 @@ use TYPO3\CMS\Recordlist\Controller\AbstractLinkBrowserController;
 use TYPO3\CMS\Recordlist\Tree\View\LinkParameterProviderInterface;
 use Intera\Recordlink\RecordList\RecordRecordList;
 
+use TYPO3\CMS\Core\LinkHandling\LinkService;
+
 /**
  * Link handler for record links
  */
@@ -51,6 +53,8 @@ class RecordLinkHandler extends AbstractLinkHandler implements LinkHandlerInterf
     public function initialize(AbstractLinkBrowserController $linkBrowser, $identifier, array $configuration)
     {
         parent::initialize($linkBrowser, $identifier, $configuration);
+
+	    // Will be removed
         $this->configuration = $configuration;
         $this->configKey = GeneralUtility::_GP('config_key');
         $this->searchString = GeneralUtility::_GP('search_field');
@@ -69,29 +73,59 @@ class RecordLinkHandler extends AbstractLinkHandler implements LinkHandlerInterf
     public function canHandleLink(array $linkParts)
     {
 
-        if (!$linkParts['url']) {
-            return false;
-        }
+	    // check first if old link style (recordlink:configkey:uid)
+	    if (isset($linkParts['url']) && !is_array($linkParts['url'])) {
+		    list($handler, $configKey, $uid) = explode(':', $linkParts['url']);
+		    if ($handler != 'recordlink') {
+			    return false;
+		    }
+		    $linkParts['url'] = array();
+		    $linkParts['url']['identifier'] = $configKey;
+		    $linkParts['url']['uid'] = $uid;
+	    } elseif(is_array($linkParts['url']) && isset($linkParts['url']['url']) && isset($linkParts['type']) && $linkParts['type']=='recordlink') {
+	        // T3 8 LTS
+		    list($configKey, $uid) = explode(':', $linkParts['url']['url']);
+			unset($linkParts['url']['url']);
+		    $linkParts['url']['identifier'] = $configKey;
+		    $linkParts['url']['uid'] = $uid;
+	    }
 
-        list($handler, $configKey, $uid) = explode(':', $linkParts['url']);
+	    if (!$linkParts['url'] || !isset($linkParts['url']['identifier'])) {
+		    return false;
+	    }
 
-        if ($handler != 'record') {
-            return false;
-        }
+	    $this->configKey = $linkParts['url']['identifier'];
+	    if (!isset($this->configuration[$this->configKey.'.'])) {
+		    return false;
+	    }
+
+	    $data = $linkParts['url'];
 
 
-        if (isset($this->configuration[$configKey . '.']['table'])) {
-            $table = $this->configuration[$configKey.'.']['table'];
-        }
+	    // Get the related record
+	    $table = $this->configuration[$this->configKey.'.']['table'];
 
-        $this->linkParts = $linkParts;
-        $this->linkParts['act'] = 'record';
-        $this->linkParts['info'] = $this->configuration[$configKey.'.']['label'];
-        $this->linkParts['configKey'] = $configKey;
-        $this->linkParts['recordTable'] = $table;
-        $this->linkParts['recordUid'] = $uid;
 
-        return true;
+	    $record = BackendUtility::getRecord($table, $data['uid']);
+	    if ($record === null) {
+		    $linkParts['title'] = $this->getLanguageService()->getLL('recordNotFound');
+	    } else {
+		    $linkParts['tableName'] = $this->getLanguageService()->sL($GLOBALS['TCA'][$table]['ctrl']['title']);
+		    $linkParts['pid'] = (int)$record['pid'];
+		    $linkParts['title'] = $linkParts['title'] ?: BackendUtility::getRecordTitle($table, $record);
+	    }
+	    $linkParts['url']['type'] = $linkParts['type'];
+
+	    // This will be removed
+	    $linkParts['act'] = 'recordlink';
+	    $linkParts['info'] = $this->configuration[$this->configKey.'.']['label'];
+	    $linkParts['configKey'] = $this->configKey;
+	    $linkParts['recordTable'] = $table;
+	    $linkParts['recordUid'] = $uid;
+
+	    $this->linkParts = $linkParts;
+
+	    return true;
     }
 
     /**
@@ -122,21 +156,36 @@ class RecordLinkHandler extends AbstractLinkHandler implements LinkHandlerInterf
     public function render(ServerRequestInterface $request)
     {
         GeneralUtility::makeInstance(PageRenderer::class)->loadRequireJsModule('TYPO3/CMS/Recordlink/RecordLinkHandler');
+	    $content = '
+			<div class="element-browser-panel element-browser-main">
+				<div class="element-browser-main-content">
+					<div class="element-browser-body">
+						<form action="" id="lrecordselector" class="form-horizontal">
+							<div class="form-group form-group-sm">
+								<label class="col-xs-4 control-label">' . $GLOBALS['LANG']->sL('LLL:EXT:recordlink/Resources/Private/Language/locallang_be.xlf:select_linktype') . '</label>
+								<div class="col-xs-8">' . $this->getRecordSelector() . '</div>
+							</div>
+						</form>
+						' . $this->getRecordList() . '
+					</div>
+				</div>
+			</div>
+	    ';
 
-        $recordselector = $this->getRecordSelector();
-        $recordlist = $this->getRecordList();
-        $content = '';
-        $content .= '
+	    // Non LTS version untested
+	    if (\TYPO3\CMS\Core\Utility\VersionNumberUtility::convertVersionNumberToInteger(TYPO3_version) < 8000000) {
+		    $content = '
 
 				<!--
 					Wrapper table for record Selector:
 				-->
 						<table border="0" cellpadding="0" cellspacing="0" id="typo3-EBrecords">
 							<tr>
-								<td class="c-wCell" valign="top">' . $recordselector . $recordlist . '</td>
+								<td class="c-wCell" valign="top">' . $content . '</td>
 							</tr>
 						</table>
 						';
+	    }
 
         return $content;
 
@@ -147,15 +196,17 @@ class RecordLinkHandler extends AbstractLinkHandler implements LinkHandlerInterf
      */
     public function getBodyTagAttributes()
     {
-        if (empty($this->linkParts)) {
-            return [];
-        }
+
+	    $attributes = [];
 
 	    $configKey = $this->linkParts['configKey'];
-        $uid = $this->linkParts['recordUid'];
-        return [
-            'data-current-link' => empty($this->linkParts) ? '' : 'record:' . $configKey . ':' . $uid
-        ];
+	    $uid = $this->linkParts['recordUid'];
+	    if (!empty($this->linkParts)) {
+		    $attributes['data-current-link'] = 'recordlink:' . $configKey . ':' . $uid;
+	    }
+
+	    return $attributes;
+
     }
 
     /**
@@ -165,9 +216,17 @@ class RecordLinkHandler extends AbstractLinkHandler implements LinkHandlerInterf
      */
     public function getUrlParameters(array $values)
     {
-        $parameters = [
-        ];
-        return array_merge($this->linkBrowser->getUrlParameters($values), $parameters);
+	    $pid = isset($values['pid']) ? (int)$values['pid'] : $this->expandPage;
+	    $parameters = [
+		    'expandPage' => $pid,
+		    'config_key' => $this->configKey
+	    ];
+
+	    return array_merge(
+		    $this->linkBrowser->getUrlParameters($values),
+		    ['P' => $this->linkBrowser->getParameters()],
+		    $parameters
+	    );
     }
 
     /**
@@ -177,6 +236,7 @@ class RecordLinkHandler extends AbstractLinkHandler implements LinkHandlerInterf
      */
     public function isCurrentlySelectedItem(array $values)
     {
+	    // Will be removed
 	    return false;
     }
 
@@ -187,6 +247,7 @@ class RecordLinkHandler extends AbstractLinkHandler implements LinkHandlerInterf
      */
     public function getScriptUrl()
     {
+	    // Will be removed
         return $this->linkBrowser->getScriptUrl();
     }
 
@@ -195,27 +256,22 @@ class RecordLinkHandler extends AbstractLinkHandler implements LinkHandlerInterf
     // *********
 
     protected function getRecordSelector() {
-        $out = '';
-        $out .= '<h3>'
-            . $GLOBALS['LANG']->sL('LLL:EXT:recordlink/Resources/Private/Language/locallang_be.xlf:select_linktype')
-            . ':</h3>';
-        $out .= '<div class="form-group">';
-        $onChange = 'onchange="jumpToUrl(' . GeneralUtility::quoteJSvalue('?act=record&config_key=') . ' + this.value); return false;"';
-        $out .= '<select class="form-control" ' . $onChange . ' >';
-        $out .= '<option value=""></option>';
-	    $configKey = (!empty($this->configKey))
-        	? $this->configKey
-	        : $this->linkParts['configKey'];
-        foreach ($this->configuration as $key => $config) {
-            $key = substr($key, 0, -1);
-            if($key==$configKey) {
-                $out .= '<option value="'.$key.'" selected="selected">'.$config['label'].'</option>';
-            } else {
-                $out .= '<option value="'.$key.'">'.$config['label'].'</option>';
-            }
-        }
-        $out .= '</select>';
-        $out .= '</div>';
+	    $out = '';
+	    $onChange = 'onchange="jumpToUrl(' . GeneralUtility::quoteJSvalue('?act=recordlink&config_key=') . ' + this.value); return false;"';
+	    $out .= '<select class="form-control" ' . $onChange . ' >';
+	    $out .= '<option value=""></option>';
+	    foreach ($this->configuration as $key => $config) {
+		    if(substr($key, -1, 1) == '.') {
+			    $key = substr($key, 0, -1);
+			    $label = (isset($config['label'])) ? $config['label'] : '';
+			    if($key==$this->configKey) {
+				    $out .= '<option value="'.$key.'" selected="selected">'.$label.'</option>';
+			    } elseif (!empty($key)) {
+				    $out .= '<option value="'.$key.'">'.$label.'</option>';
+			    }
+		    }
+	    }
+	    $out .= '</select>';
         return $out;
     }
 
