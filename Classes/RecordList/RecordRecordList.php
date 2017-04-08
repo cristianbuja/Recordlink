@@ -191,7 +191,7 @@ class RecordRecordList extends DatabaseRecordList
 
 	public function getBrowseURL() {
 		if (!isset($this->browseURL)) {
-			$this->browseURL = $this->listURL() . '&act=record&config_key='.$this->configKey;
+			$this->browseURL = $this->listURL() . '&act=recordlink&config_key='.$this->configKey;
 		}
 		return $this->browseURL;
 	}
