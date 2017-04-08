@@ -1,5 +1,7 @@
 # Recordlink
 
+### Important notice for version 2.x.x
+
 ### Important notice for version 1.3.0
 This version is a bridge for upgrade from TYPO3 7.6 to 8 LTS
 
