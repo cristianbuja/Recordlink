@@ -165,7 +165,7 @@ class RecordRecordList extends DatabaseRecordList
 		return $this->addElement(1, '', $data);
 	}
 
-	public function getSearchBox() {
+	public function getSearchBox($formFields = true) {
 
 		$formElements = array('<form action="' . htmlspecialchars($this->getSearchURL()) . '" method="post" style="padding:0;">', '</form>');
 
