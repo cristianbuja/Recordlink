@@ -5,6 +5,9 @@
 TS Config changes example:
 - See example in Configuration/PageTS
 
+Query for update from 1.3.0 version
+- See update script
+
 
 ### Important notice for version 1.3.0
 This version is a bridge for upgrade from TYPO3 7.6 to 8 LTS

@@ -1,0 +1,13 @@
+<div class="element-browser-panel element-browser-main">
+	<div class="element-browser-main-content">
+		<div class="element-browser-body">
+			<form action="" id="lrecordselector" class="form-horizontal">
+				<div class="form-group form-group-sm">
+					<label class="col-xs-4 control-label"><f:translate key="LLL:EXT:recordlink/Resources/Private/Language/locallang_be.xlf:select_linktype" /></label>
+					<div class="col-xs-8">{recordSelector -> f:format.raw()}</div>
+				</div>
+			</form>
+			{recordList -> f:format.raw()}
+		</div>
+	</div>
+</div>
