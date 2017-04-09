@@ -5,7 +5,6 @@ TCEMAIN.linkHandler.recordlink.configuration {
 	category {
 		 label = Categories
 		 table = sys_category
-		 pid =
-		 recursive =
+		 storagePid = 1
 	}
 }
