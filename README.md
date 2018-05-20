@@ -1,5 +1,9 @@
 # Recordlink
 
+### Important notice for version 2.0.1
+
+Obsolete extension
+
 ### Important notice for version 2.x.x
 
 TS Config changes example:
