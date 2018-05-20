@@ -9,7 +9,7 @@
   "description": "Record Link",
   "type": "typo3-cms-extension",
   "license": "GPL-2.0",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "require": {
     "typo3/cms": ">=8.7.0 <8.7.99"
   },
